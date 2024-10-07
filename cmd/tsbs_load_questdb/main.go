@@ -46,6 +46,10 @@ func init() {
 	config = load.BenchmarkRunnerConfig{}
 	// Not all the default flags apply to QuestDB
 	// config.AddToFlagSet(pflag.CommandLine)
+	pflag.CommandLine.String("results-file", "", "Write the test results summary json to this file")
+	pflag.CommandLine.String("db-name", "benchmark", "Name of database")
+	pflag.CommandLine.Bool("do-create-db", true, "Whether to create the database. Disable on all but one client if running on a multi client setup.")
+	pflag.CommandLine.Bool("do-abort-on-exist", false, "Whether to abort if a database with the given name already exists.")
 	pflag.CommandLine.Uint("batch-size", 10000, "Number of items to batch together in a single insert")
 	pflag.CommandLine.Uint("workers", 1, "Number of parallel clients inserting")
 	pflag.CommandLine.Uint64("limit", 0, "Number of items to insert (0 = all of them).")

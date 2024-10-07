@@ -18,12 +18,25 @@ type dbCreator struct {
 	config  *ClickhouseConfig
 }
 
-// loader.DBCreator interface implementation
+var tableCols map[string][]string
+var tagColumnTypes []string
+
 func (d *dbCreator) Init() {
-	// fills dbCreator struct with data structure (tables description)
-	// specified at the beginning of the data file
-	d.headers = d.ds.Headers()
+    // Füllt die Struktur mit Tabellenbeschreibungen
+    d.headers = d.ds.Headers()
+
+    // Initialisiere tableCols und tagColumnTypes
+    if tableCols == nil {
+        tableCols = make(map[string][]string)
+    }
+    tableCols["tags"] = d.headers.TagKeys
+    tagColumnTypes = d.headers.TagTypes
+
+    for tableName, fieldColumns := range d.headers.FieldKeys {
+        tableCols[tableName] = fieldColumns
+    }
 }
+
 
 // loader.DBCreator interface implementation
 func (d *dbCreator) DBExists(dbName string) bool {
@@ -143,7 +156,8 @@ func createMetricsTable(conf *ClickhouseConfig, db *sqlx.DB, tableName string, f
 				tags_id         UInt32,
 				%s,
 				additional_tags String   DEFAULT ''
-			) ENGINE = MergeTree(created_date, (tags_id, created_at), 8192)
+			) ENGINE = MergeTree()
+			PRIMARY KEY (tags_id, created_at)
 			`,
 		tableName,
 		strings.Join(columnsWithType, ","))
@@ -175,14 +189,15 @@ func generateTagsTableQuery(tagNames, tagTypes []string) string {
 	index := "id"
 
 	return fmt.Sprintf(
-		"CREATE TABLE tags(\n"+
-			"created_date Date     DEFAULT today(),\n"+
-			"created_at   DateTime DEFAULT now(),\n"+
-			"id           UInt32,\n"+
-			"%s"+
-			") ENGINE = MergeTree(created_date, (%s), 8192)",
-		cols,
-		index)
+	"CREATE TABLE tags(\n"+
+		"created_date Date     DEFAULT today(),\n"+
+		"created_at   DateTime DEFAULT now(),\n"+
+		"id           UInt32,\n"+
+		"%s"+
+		") ENGINE = MergeTree()\n"+
+		"PRIMARY KEY (%s)",
+	cols,
+	index)
 }
 
 func serializedTypeToClickHouseType(serializedType string) string {
